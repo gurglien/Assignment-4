@@ -26,6 +26,7 @@ module Expr(Expr, T, parse, fromString, value, toString) where
 import Prelude hiding (return, fail)
 import Parser hiding (T)
 import qualified Dictionary
+import Maybe
 
 data Expr = Num Integer | Var String | Add Expr Expr 
        | Sub Expr Expr | Mul Expr Expr | Div Expr Expr
@@ -71,7 +72,16 @@ shw prec (Mul t u) = parens (prec>6) (shw 6 t ++ "*" ++ shw 6 u)
 shw prec (Div t u) = parens (prec>6) (shw 6 t ++ "/" ++ shw 7 u)
 
 value :: Expr -> Dictionary.T String Integer -> Integer
-value (Num n) _ = error "value not implemented"
+value (Num n) _ = n
+value (Var v) dict 
+	| isJust $ Dictionary.lookup v dict =  fromJust $ Dictionary.lookup v dict
+	| otherwise = error "Non valid variable, please initiate first"
+value (Add t u) dict = value t dict + value u dict
+value (Sub t u) dict = value t dict - value u dict
+value (Mul t u) dict = value t dict * value u dict
+value (Div t u) dict 
+	| value u dict /= 0 = value t dict `div` value u dict
+	| otherwise = error "Can't divide by zero"
 
 instance Parse Expr where
     parse = expr
