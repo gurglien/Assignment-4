@@ -14,12 +14,12 @@ data Statement =
 		Write Expr.T
     deriving Show
 
+assignment, skip, begin, ifStmt, while, readStmt, write :: Parser Statement
 assignment = word #- accept ":=" # Expr.parse #- require ";" >-> buildAss
 buildAss (v, e) = Assignment v e 
 
 skip = accept "skip" #- require ";">->buildSkip
 buildSkip _ = Skip
-
 
 begin = accept "begin" -# iter parse #- require "end" >-> buildBegin
 buildBegin a = Begin a 
@@ -37,6 +37,7 @@ write = accept "write" -# Expr.parse #- require ";" >-> buildWrite
 buildWrite b = Write b 
 
 exec :: [T] -> Dictionary.T String Integer -> [Integer] -> [Integer]
+exec [] _ _ = []
 exec (If cond thenStmts elseStmts: stmts) dict input = 
 	if (Expr.value cond dict)>0 
 	then exec (thenStmts: stmts) dict input
@@ -50,15 +51,22 @@ exec (Skip : stmts) dict input = exec stmts dict input
 exec (Write expr : stmts) dict input = Expr.value expr dict : exec stmts dict input 
 exec (Read expr : stmts) dict (i:input) = exec stmts (Dictionary.insert (expr, i) dict) input
 exec (Begin list : stmts) dict input = exec (list ++stmts) dict input
-exec [] _ _ = []
+
+
+toString' :: Statement -> String
+toString' (While expr stmts) = "while " ++ Expr.toString expr ++ " do\n" ++ (toString stmts)
+toString' (Skip) = "skip;\n"
+toString' (Assignment name expr) = name ++ " := " ++ Expr.toString expr ++ ";\n"
+toString' (Write expr) = "Write " ++ Expr.toString expr ++ ";\n"
+toString' (Begin list) = "Begin\n" ++ foldr1 (++) (map toString list) ++ "end\n"
+toString' (Read name) = "Read " ++ name ++ ";\n"
+toString' (If cond thenStmt elseStmt) = "if " ++ Expr.toString cond ++ "\nthen\n"  ++ (toString thenStmt) ++ "else\n" ++ (toString elseStmt)
+
 
 
 instance Parse Statement where
-  parse = assignment ! skip ! readStmt ! write ! ifStmt ! while ! begin
-	toString (While expr stmts) = "while " ++ Expr.toString expr ++ " do\n" ++ (toString stmts)
-	toString (Skip) = "skip;\n"
-	toString (Assignment name expr) = "Assignment " ++ name ++ " := " ++ Expr.toString expr ++ ";\n"
-	toString (Write expr) = "Write " ++ Expr.toString expr ++ ";\n"
-	toString (Begin list) = "Begin " ++ map toString list
-	toString (Read expr) = "Read " ++ Expr.toString expr ++ ";\n"
-	toString (If cond thenStmt elseStmt) = "if " ++ Expr.toString cond ++ " then\n"  ++ (toString thenStmt) ++ "\nelse\n" ++ (toString elseStmt)
+	parse = assignment ! skip ! readStmt ! write ! ifStmt ! while ! begin
+	toString = toString'
+	
+	
+	
