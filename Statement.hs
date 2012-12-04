@@ -5,8 +5,13 @@ import qualified Dictionary
 import qualified Expr
 type T = Statement
 data Statement =
-    Assignment String Expr.T |
-    If Expr.T Statement Statement
+    Assignment String Expr.T |   
+		Skip |
+		Begin [Statement] String |
+		If Expr.T Statement Statement |
+		While Expr.T Statement |
+		Read Variable |
+		Write Expr.T
     deriving Show
 
 assignment = word #- accept ":=" # Expr.parse #- require ";" >-> buildAss
@@ -21,3 +26,15 @@ exec (If cond thenStmts elseStmts: stmts) dict input =
 instance Parse Statement where
   parse = error "Statement.parse not implemented"
   toString = error "Statement.toString not implemented"
+
+
+-- program ::= statements
+-- statement ::= variable ':=' expr ';'
+  -- | 'skip' ';'
+  -- | 'begin' statements 'end'
+  -- | 'if' expr 'then' statement 'else' statemen
+  -- | 'while' expr 'do' statement
+  -- | 'read' variable ';'
+  -- | 'write' expr ';'
+--  statements ::= {statement}
+--  variable ::= letter {letter}
